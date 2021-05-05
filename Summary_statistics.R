@@ -74,6 +74,19 @@ Terrain_summary=data.frame(Mean=colMeans(Terrain[sapply(Terrain, is.numeric)]),
 
 Summary=rbind(active_disturbance_summary,infrastructure_summary,Terrain_summary,substrate_summary)
 
+Landcover=habitat_long%>%
+  filter(is.na(Segment_ID)==F)%>%
+  group_by(X7_Cell_ID)%>%
+  summarise(Grassland=sum(Grassland)/n_distinct(form_id,Segment_ID),
+            Agriculture_active=sum(Agriculture_active)/n_distinct(form_id,Segment_ID),
+            Scrubland=sum(Scrubland)/n_distinct(form_id,Segment_ID))
+
+Landcover_summary=data.frame(Mean=colMeans(Landcover[sapply(Landcover, is.numeric)]),
+                           SE=c(sd(Landcover$Grassland)/sqrt(nrow(Landcover)),
+                                sd(Landcover$Agriculture_active)/sqrt(nrow(Landcover)),
+                                sd(Landcover$Scrubland)/sqrt(nrow(Landcover))),
+                           Feature="Landcover")
+
 library(tidyverse)
 a=habitat_long%>%
   group_by(X25_Landcover_100m)%>%
