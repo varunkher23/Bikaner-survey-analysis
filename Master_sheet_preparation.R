@@ -84,8 +84,8 @@ habitat_long=habitat%>%
   mutate(Woodland=ifelse(str_detect(habitat$X25_Landcover_100m,"Woodland")==T,as.numeric(1),as.numeric(0)))%>%
   mutate(Fallow=ifelse(str_detect(habitat$X25_Landcover_100m,"Barren/Fallow")==T,as.numeric(1),as.numeric(0)))%>%
   mutate(Agriculture_active=ifelse(Agriculture==1 & X33_Agriculture!=0,as.numeric(1),as.numeric(0)))%>%
-  mutate(Agriculture_active=ifelse(str_detect(habitat$X34_3_Dominant_Plants,"Wheat|Chana|Mustard")==T,as.numeric(1),Agriculture_active))%>%
-  mutate(Agriculture_active=ifelse(str_detect(habitat$X35_Name_of_species_i,"Wheat|Chana|Mustard")==T,as.numeric(1),Agriculture_active))
+  mutate(Agriculture_active=ifelse(str_detect(habitat$X34_3_Dominant_Plants,"Wheat|Chana|Mustard|Isab gol|Jeera")==T,as.numeric(1),Agriculture_active))%>%
+  mutate(Agriculture_active=ifelse(str_detect(habitat$X35_Name_of_species_i,"Wheat|Chana|Mustard|Isab gol|Gram")==T,as.numeric(1),Agriculture_active))
 
 point_master=full_join(habitat,point,by = c("form_id","Segment_ID"))%>%
   mutate(Time=as.character(X13_Time))%>%
