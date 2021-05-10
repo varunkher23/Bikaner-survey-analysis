@@ -1,0 +1,216 @@
+---
+title: "Bikaner_survey_report"
+author: "Great Indian Bustard Recovery Program, Wildlife Institute of India"
+date: "06/05/2021"
+output:
+  pdf_document: 
+    fig_caption: yes
+    extra_dependencies: ["float"]
+  word_document: 
+    fig_caption: yes
+---
+
+```{r setup, include=FALSE}
+library(rmarkdown)
+library(knitr)
+library(tidyverse)
+library(Distance)
+library(Rdistance)
+library(redoc)
+library(sf)
+library(bookdown)
+library(lubridate)
+library(chron)
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(fig.pos = "H")
+```
+## 4. Results
+
+```{r echo=FALSE,include=F}
+##### First run "Codes/Master_sheet_preparation.R". Easiest way is to select all (Ctrl + A) and press Run (Ctrl + Enter).
+habitat_master=read.csv("Master_sheets/habitat_long.csv")
+animal_master=read.csv("Master_sheets/animal_master_long.csv")
+point_master=read.csv("Master_sheets/point_master_long.csv")
+transect_summary=read.csv("Master_sheets/Transect_summary.csv")
+source("Codes/Summary_statistics.R")
+habitat_summarised=read.csv("Master_sheets/Habitat_summary_gridwise.csv")
+```
+### 4.1. Population status of Mammals
+
+  Our extensive surveys covered `r length(unique(habitat_summarised$X7_Cell_ID))` cells (`r as.integer(length(unique(habitat_summarised$X7_Cell_ID))*144)` km2 area) through a transect effort of `r sum(transect_summary$transect_length)` km in 2021. Data generated from these surveys provided estimates of species' occupancy, density and abundance. At the same time, we collected data on habitat and disturbance at `r habitat_master%>%select(X7_Cell_ID,New_segment)%>%unique.data.frame()%>%nrow()` points to estimate the effects of natural and anthropogenic changes on animal populations.
+
+#### 4.1.1. Chinkara
+
+```{r echo=FALSE,include=FALSE}
+habitat_summarised=read.csv("Master_sheets/Habitat_summary_gridwise.csv")%>%
+  mutate(Canal=as.factor(Canal))%>%
+  arrange(X7_Cell_ID)%>%
+  select(-X)
+
+animal_long=read.csv("Master_sheets/animal_master_long.csv")%>%
+  arrange(X7_Cell_ID)%>%
+  rename(size=X46_Individuals_Count)%>%
+  select(-X)
+
+chinkara=animal_long%>%
+  filter(X45_Species=="Chinkara (Gazella bennettii)")%>%
+  full_join(habitat_summarised)%>%
+  rename(Effort=transect_length)%>%
+  mutate(Area=ifelse(Canal==1,as.numeric(6336),as.numeric(6480)))%>%
+  rename(Sample.Label=X7_Cell_ID)%>%
+  mutate(Region.Label=Canal)
+
+
+Dfox=animal_long%>%
+  filter(X45_Species=="Desert Fox (Vulpes vulpes pusilla)")%>%
+  full_join(habitat_summarised)%>%
+  rename(Effort=transect_length)%>%
+  mutate(Area=ifelse(Canal==1,as.numeric(6336),as.numeric(6480)))%>%
+  rename(Sample.Label=X7_Cell_ID)%>%
+  mutate(size=ifelse(size>4,1,size))%>%
+  mutate(Region.Label=Canal)
+
+hist(chinkara$distance,  main="Peak activity data set",
+     xlab="Radial distance (m)",labels = T)
+```
+
+  Our extensive surveys resulted in detection of `r sum(chinkara$size,na.rm = T)` individual chinkara belonging to `r chinkara%>%filter(!is.na(X45_Species))%>%nrow()` herds. The encounter rate of chinkara herds and individuals was `r chinkara%>%filter(!is.na(size))%>%group_by(Sample.Label)%>%summarise(ER=as.numeric(length(size)/mean(Effort,na.rm=T)))%>% as.data.frame()%>%summarise(mean=round(mean(ER)*100,2))%>%as.numeric(mean)` ± `r chinkara%>%filter(!is.na(size))%>%group_by(Sample.Label)%>%summarise(ER=as.numeric(length(size)/mean(Effort,na.rm=T)))%>% as.data.frame()%>%summarise(se=round(as.numeric(sd(ER)/sqrt(length(ER)))*100,2))%>%select(se)%>%as.numeric()` per 100km and `r chinkara%>%group_by(Sample.Label)%>%summarise(ER=as.numeric(sum(size,na.rm = T)/mean(Effort,na.rm=T)))%>% as.data.frame()%>%summarise(mean=round(mean(ER)*100,2))%>%as.numeric(mean)` ± `r chinkara%>%group_by(Sample.Label)%>%summarise(ER=as.numeric(sum(size,na.rm = T)/mean(Effort,na.rm=T)))%>% as.data.frame()%>%summarise(se=round((sd(ER)/sqrt(length(ER)))*100,2))%>%as.numeric(mean)` oer 100 km respectively. 
+
+```{r echo=F,include=FALSE}
+breakpoints <- c(0,90,150,250,330)
+##### Chinkara = c(0,90,150,250,330)
+#### Desert Fox = c(0,50,100,150,200)
+conversion <- convert_units("meter", "kilometer", "square kilometer")
+trunc.list <- list(left=min(breakpoints),right=max(breakpoints))
+mybreaks <- breakpoints
+
+hn1 <- ds(chinkara, transect = "line", key="hn", convert.units = conversion,adjustment = NULL,
+           cutpoints = mybreaks,truncation = trunc.list,formula = ~1)
+hn2 <- ds(chinkara, transect = "line", key="hn", convert.units = conversion,adjustment = "herm",
+          cutpoints = mybreaks,truncation = trunc.list,formula = ~1)
+hn3 <- ds(chinkara, transect = "line", key="hn", convert.units = conversion,adjustment = "cos",
+          cutpoints = mybreaks,truncation = trunc.list,formula = ~1)
+hn4 <- ds(chinkara, transect = "line", key="hn", convert.units = conversion,adjustment = "poly",
+          cutpoints = mybreaks,truncation = trunc.list,formula = ~1)
+uni1=ds(chinkara, transect = "line", key="unif", convert.units = conversion,adjustment = "cos",
+        cutpoints = mybreaks,truncation = trunc.list,formula = ~1)
+hr1=ds(chinkara, transect = "line", key="hr", convert.units = conversion,adjustment = NULL,
+        cutpoints = mybreaks,truncation = trunc.list,formula = ~1)
+hr2=ds(chinkara, transect = "line", key="hr", convert.units = conversion,adjustment = "cos",
+        cutpoints = mybreaks,truncation = trunc.list,formula = ~1)
+best_model=data.frame(AIC(hn1,hn2,hn3,hn4,uni1,hr1,hr2))%>%filter(AIC==min(AIC))%>%rownames()%>%get()
+gof_ds(best_model)
+```
+
+Distance data of these observations was best explained by a  `r best_model[["ddf"]][["name.message"]]` (Figure \ref {fig:chinkara_bestmodel}). The estimated herd effective strip width was `r round(best_model$dht$clusters$average.p*trunc.list$right,2)` ± `r round(best_model$dht$clusters$average.p*trunc.list$right*(summary(best_model)[["ds"]][["average.p.se"]]/summary(best_model)[["ds"]][["average.p"]]),2)` m for a truncation distance of `r trunc.list$right` m. The estimated Chinkara density across the landscape was `r round(best_model$dht$individuals$D$Estimate[length(unique(chinkara$Region.Label))+1],2)` ± `r round(best_model$dht$individuals$D$se[length(unique(chinkara$Region.Label))+1],2)` animals/sq.km with an average group size of `r round(best_model$dht$Expected.S$Expected.S[length(unique(chinkara$Region.Label))+1],2)` ± `r round(best_model$dht$Expected.S$se.Expected.S[length(unique(chinkara$Region.Label))+1],2)`. This amounts to `r as.integer(round(best_model$dht$individuals$N$Estimate[length(unique(chinkara$Region.Label))+1],0))` ± `r round(best_model$dht$individuals$N$se[length(unique(chinkara$Region.Label))+1],0)` in the studied landscape.
+
+```{r echo=FALSE, eval=TRUE}
+kable(summarize_ds_models(hn1,hn2,hn3,uni1,hr1,hr2),digits=3,sort="AIC",caption = "Model selection summary for Chinkara line transect")
+```
+
+```{r chinkara_bestmodel, echo=F,message=FALSE,results='hide',fig.cap="\\label{fig:chinkara_bestmodel}Best fit detection model for Chinkara"}
+plot(best_model)
+```
+
+
+```{r include=FALSE}
+source("Codes/Spatial.R")
+```
+
+```{r chinkara_ER,warning=FALSE,message=FALSE, fig.width=12,fig.height=9.48,dpi=300,dev='jpeg',out.width='100%', fig.cap="\\label{fig:chinkara_ER}Spatial distribution of Chinkara population"}
+plot(Chinkara_ER)
+```
+
+#### 4.1.2 Desert Fox
+
+```{r echo=F,include=FALSE}
+breakpoints <- c(0,50,100,150,200)
+##### Chinkara = c(0,90,150,250,330)
+#### Desert Fox = c(0,50,100,150,200)
+conversion <- convert_units("meter", "kilometer", "square kilometer")
+trunc.list <- list(left=min(breakpoints),right=max(breakpoints))
+mybreaks <- breakpoints
+
+hn1 <- ds(Dfox, transect = "line", key="hn", convert.units = conversion,adjustment = NULL,
+           cutpoints = mybreaks,truncation = trunc.list,formula = ~1)
+hn2 <- ds(Dfox, transect = "line", key="hn", convert.units = conversion,adjustment = "herm",
+          cutpoints = mybreaks,truncation = trunc.list,formula = ~1)
+hn3 <- ds(Dfox, transect = "line", key="hn", convert.units = conversion,adjustment = "cos",
+          cutpoints = mybreaks,truncation = trunc.list,formula = ~1)
+hn4 <- ds(Dfox, transect = "line", key="hn", convert.units = conversion,adjustment = "poly",
+          cutpoints = mybreaks,truncation = trunc.list,formula = ~1)
+uni1=ds(Dfox, transect = "line", key="unif", convert.units = conversion,adjustment = "cos",
+        cutpoints = mybreaks,truncation = trunc.list,formula = ~1)
+hr1=ds(Dfox, transect = "line", key="hr", convert.units = conversion,adjustment = NULL,
+        cutpoints = mybreaks,truncation = trunc.list,formula = ~1)
+hr2=ds(Dfox, transect = "line", key="hr", convert.units = conversion,adjustment = "cos",
+        cutpoints = mybreaks,truncation = trunc.list,formula = ~1)
+best_model=data.frame(AIC(hn1,hn2,hn3,hn4,uni1,hr1,hr2))%>%filter(AIC==min(AIC))%>%rownames()%>%get()
+gof_ds(best_model)
+```
+
+We detected `r sum(Dfox$size,na.rm = T)` fox individuals during our survey, with an encounter rate of `r Dfox%>%group_by(Sample.Label)%>%summarise(ER=as.numeric(sum(size,na.rm = T)/mean(Effort,na.rm=T)))%>% as.data.frame()%>%summarise(mean=round(mean(ER)*100,2))%>%as.numeric(mean)` ± `r Dfox%>%group_by(Sample.Label)%>%summarise(ER=as.numeric(sum(size,na.rm = T)/mean(Effort,na.rm=T)))%>% as.data.frame()%>%summarise(se=round((sd(ER)/sqrt(length(ER)))*100,2))%>%as.numeric(mean)` per 100 sq.km. These observations were best explained by a `r data.frame(a=best_model[["ddf"]][["name.message"]])%>%separate(a,c("model","adjustment"),sep=" with ")%>%select(model)%>%as.character()` detection model with `r data.frame(a=best_model[["ddf"]][["name.message"]])%>%separate(a,c("model","adjustment"),sep=" with ")%>%select(adjustment)%>%as.character()` (Figure \ref{fig:Dfox_bestmodel}). The estimated effective strip width was `r round(best_model$dht$clusters$average.p*trunc.list$right,2)` ± `r round(best_model$dht$clusters$average.p*trunc.list$right*(summary(best_model)[["ds"]][["average.p.se"]]/summary(best_model)[["ds"]][["average.p"]]),2)` m for a truncation distance of `r trunc.list$right` m. The estimated Desert Fox density across the landscape was `r round(best_model$dht$individuals$D$Estimate[length(unique(Dfox$Region.Label))+1],2)` ± `r round(best_model$dht$individuals$D$se[length(unique(Dfox$Region.Label))+1],2)` individuals per sq.km and the average group size was `r round(best_model$dht$Expected.S$Expected.S[length(unique(Dfox$Region.Label))+1],2)` ± `r round(best_model$dht$Expected.S$se.Expected.S[length(unique(Dfox$Region.Label))+1],2)`. This adds up to `r as.integer(round(best_model$dht$individuals$N$Estimate[length(unique(Dfox$Region.Label))+1],0))` ± `r round(best_model$dht$individuals$N$se[length(unique(Dfox$Region.Label))+1],0)` in the study area.
+
+```{r echo=FALSE}
+kable(summarize_ds_models(hn1,hn2,hn3,uni1,hr1,hr2),digits=3,sort="AIC",caption = "Model selection summary for Chinkara line transect")
+```
+
+```{r Dfox_bestmodel, echo=F,message=FALSE,results='hide',fig.cap="\\label{fig:Dfox_bestmodel}Best fit detection model for Desert Fox"}
+plot(best_model)
+```
+
+```{r Dfox_ER,warning=FALSE,message=FALSE, fig.width=12,fig.height=9.48,dpi=300,dev='jpeg',out.width='100%', fig.cap="\\label{fig:Dfox_ER}Spatial distribution of Desert Fox population"}
+plot(Dfox_ER)
+```
+
+### 4.2 Habitat status
+
+```{r include=F}
+Summary=read.csv("Master_sheets/Habitat_summary_long.csv")%>%
+    select(-X)%>%
+  separate("Value",c("Mean","SE"),sep=" ")%>%
+  arrange(desc(Mean))%>%
+  group_by(Feature)%>%
+  mutate(rank=row_number())
+plants=habitat_master%>%
+  separate(col = "X34_3_Dominant_Plants",into = c("Plant1","Plant2","Plant3","Plant4"),sep=", ")%>%
+  select(Plant1:Plant4)%>%
+  unlist()%>%
+  as.data.frame()%>%
+  `colnames<-`("V1")%>%
+  filter(!is.na(V1))%>%
+  mutate(ID=row_number())%>%
+  group_by(V1)%>%
+  summarise(Total=length(unique(ID)))%>%
+  arrange(desc(Total))
+  
+
+```
+Habitat characterization along transects during 2017 survey showed that the landscape was dominated by: a) `r Summary[Summary$Feature=="Terrain"&Summary$rank=="1",2]` followed by `r tolower(Summary[Summary$Feature=="Terrain"&Summary$rank=="2",2])` terrain (Figure \ref{fig:Terrain}); b) `r Summary[Summary$Feature=="Substrate"&Summary$rank=="1",2]` followed by `r tolower(Summary[Summary$Feature=="Substrate"&Summary$rank=="2",2])` substrate; c) `r Summary[Summary$Feature=="Landcover"&Summary$rank=="1",2]` followed by `r tolower(Summary[Summary$Feature=="Landcover"&Summary$rank=="2",2])` and `r tolower(Summary[Summary$Feature=="Landcover"&Summary$rank=="3",2])` land-cover (Figure \ref{fig:Landcover}); and d) `r paste(t(plants$V1[1:8]),collapse = " > ")` vegetation. Among human artifacts (threats), `r tolower(Summary[Summary$Feature=="Infrastructure"&Summary$rank=="1",2])` was the most common followed by `r tolower(Summary[Summary$Feature=="Infratructure"&Summary$rank=="2",2])` and `r tolower(Summary[Summary$Feature=="Infrastructure"&Summary$rank=="3",2])` (Figure \ref{fig:Infra}).
+
+```{r echo=F, message=FALSE}
+#library(kableExtra)
+Summary=read.csv("Master_sheets/Habitat_summary_long.csv")%>%
+    select(-X)%>%
+    arrange(Feature)
+kable(Summary,align = "c",caption="Descriptive statistics of habitat covariates")#%>%
+  #kable_paper(full_width = F) %>%
+  #column_spec(1, bold = T)%>%
+  #collapse_rows(1)
+```
+
+```{r Terrain, warning=FALSE,message=FALSE, fig.width=14.5,fig.height=6.7,dpi=300,dev='jpeg',out.width='100%', fig.cap="\\label{fig:Terrain}Spatial gradient of Terrain in the Bikaner Landscape measured as the proportion of point having a particular terrain type"}
+plot(Terrain)
+```
+  
+```{r Infra,warning=FALSE,message=FALSE, fig.width=17,fig.height=14.3,dpi=300,dev='jpeg',out.width='100%', fig.cap="\\label{fig:Infra}Spatial gradient of Infrastructure presence in the Bikaner Landscape measured as the proportion of point having a particular infrastructure within 100m radiius"}
+plot(infrastructure)
+```
+
+```{r Landcover,warning=FALSE,message=FALSE, fig.width=17,fig.height=14.3,dpi=300,dev='jpeg',out.width='100%', fig.cap="\\label{fig:Landcover}Spatial gradient of Land-use measured by the proportion of point having a particular landcover type within 100m radius"}
+plot(Landcover)
+```
+
+```{r Disturbance,warning=FALSE,message=FALSE, fig.width=17,fig.height=14.3,dpi=300,dev='jpeg',out.width='100%', fig.cap="\\label{fig:Disturbance}Gradient of anthropogenic disturbance measured as the proportion of points having a particular disturbance within 100m radius"}
+plot(active_disturbance)
+```

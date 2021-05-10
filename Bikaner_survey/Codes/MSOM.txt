@@ -1,0 +1,72 @@
+    data {
+      nBeta <- dim(X)
+      nG <- dim(XG)
+      nP <- dim(dX)
+    }
+    model {
+      # Define covariance parameter between detection and mean occupancy
+      rho ~ dunif(-1,1)
+      var.p <- sigma.p /(1.-pow(rho,2))
+      
+      #Define prior distributions for occupancy parameters
+      alpha.mean <- log(psi.mean) - log(1-psi.mean)
+      psi.mean ~ dunif(0,1)
+      sigma.occ ~ dunif(0,10)
+      tau.occ <- pow(sigma.occ,-2)
+      #Define prior distributions for true positive detections
+      p.mean ~ dunif(0,1)
+      b <- log(p.mean) - log(1-p.mean)
+      sigma.p ~ dunif(0,10)
+      tau.p <- pow(sigma.p,-2)
+      #Define prior distributions for occupancy effects where nbeta is the number of occupancy 
+      #covariates in the model, mbeta is the community-level hyper-parameter for each of the nbeta 
+      #covariates, tbeta is the amount of variability in each of the community-level hyper-parameters, 
+      #and sbeta is the species-specific covariate effects
+      for (a in 1:nBeta[2]){
+        mbeta[a] ~ dnorm(0,0.01) 
+        sigbeta[a] ~ dunif(0,10)
+        tbeta[a] <- pow(sigbeta[a],-2) 
+        for (i in 1:(nspp)) { 
+          sbeta[i,a] ~ dnorm(0,tbeta[a]) 
+        }
+      }
+      #Define prior distributions for nG, the group-level hyper-parameters
+      for (a in 1:nG[2]){
+      gbeta[a] ~ dnorm(0,0.01)
+    }
+    #Define prior distributions for detection effects where nP is the number of detection covariates in 
+    #the model, pbeta is the community-level hyper-parameter for each of the nP covariates, tpbeta is 
+    #the amount of variability in each of the community-level hyper-parameters, and spbeta is the 
+    #species-specific covariate effects
+    for (a in 1:nP[3]){
+      pbeta[a] ~ dnorm(0,0.01)
+      sigpbeta[a] ~ dunif(0,10)
+      tpbeta[a] <- pow(sigpbeta[a],-2) 
+      for (i in 1:(nspp)) { 
+        spbeta[i,a] ~ dnorm(0,tpbeta[a]) 
+      }
+    }
+    #Define prior distributions for the occupancy and detection covariates for each species 
+    for (i in 1:(nspp)) {
+      alpha[i] ~ dnorm(alpha.mean, tau.occ)
+      mu.p[i] <- b + (rho*sigma.p /sigma.occ)*(alpha[i] - alpha.mean)
+      P[i] ~ dnorm(mu.p[i], var.p)
+    }
+    
+    #Estimate the occupancy probability (latent Z matrix) for each species at each camera station
+    for(i in 1:(nspp)){
+    for (j in 1:n) {
+      logit(psi[i,j]) <- alpha[Species[i]] + inprod(mbeta,X[j,])+ inprod(sbeta[Species[i],],
+                                                                       X[j,]) + inprod(gbeta,XG[j,])
+      
+      Z[i,j] ~ dbern(psi[i,j])
+      #Estimate the detection probability for each species at each camera station
+      for(k in 1:nvisits[j]){
+      logit(p[i,j,k]) <- P[Species[i]] + inprod(pbeta,dX[j,k,]) + inprod(spbeta[Species[i],],
+                                                                   dX[j,k,])
+      zp[i,j,k] <- p[i,j,k]*Z[i,j]
+      D[i,j,k] ~ dbern(zp[i,j,k])
+      }
+    }
+  }
+}
