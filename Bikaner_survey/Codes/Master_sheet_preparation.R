@@ -54,8 +54,11 @@ animal=read.csv("Raw_data/Epicollect/branch-1__animal-sighting.csv")%>%
   mutate(Animal_Lat = as.character(lat_42_Location),Animal_Long=as.character(long_42_Location))%>%
   mutate(Animal_Lat = ifelse(is.na(lat_42_Location)==T, as.character(lat_manual), lat_42_Location))%>%
   mutate(Animal_Long = ifelse(is.na(long_42_Location)==T, as.character(long_manual), long_42_Location))%>%
-  select(-created_at,-uploaded_at,-title,-lat_42_Location,-long_42_Location,-UTM_Northing_42_Location,
-         -UTM_Easting_42_Location,-UTM_Zone_42_Location,-long_manual,-lat_manual,-X51_Gender_if_known,-X52_ID_Manual)%>%
+  mutate(Lat=ifelse(Animal_Lat<50,Animal_Lat,Animal_Long))%>%
+  mutate(Long=ifelse(Animal_Long>50,Animal_Long,Animal_Lat))%>%
+  dplyr::select(-created_at,-uploaded_at,-title,-lat_42_Location,-long_42_Location,-UTM_Northing_42_Location,-Animal_Lat,
+         -UTM_Easting_42_Location,-UTM_Zone_42_Location,-long_manual,-lat_manual,-X51_Gender_if_known,-X52_ID_Manual,
+         -Animal_Long)%>%
   mutate(angle=abs(X48_SightAnimal_Beari-X49_Transect_Bearing))%>%
   mutate(distance=abs(X47_Sighting_Distance*sin(angle*pi/180)))
 
@@ -139,10 +142,10 @@ habitat_long=full_join(habitat_long,segment_time,by=c("X7_Cell_ID","New_segment"
 ##animal_master_short=full_join(habitat,animal,by = c("form_id","Segment_ID"))%>%
   ##select(-created_by.y)
 animal_master_long=full_join(habitat_long,animal,by = c("form_id","Segment_ID"))%>%
-  select(form_id,	X2_Team_Member_1,	X3_Team_Member_2,	X4_Team_Member_3,	X5_Team_Member_4,	
+  dplyr::select(form_id,	X2_Team_Member_1,	X3_Team_Member_2,	X4_Team_Member_3,	X5_Team_Member_4,	
          X7_Cell_ID,	X8_Transect_ID,Segment_ID,New_segment,Time,AnimalBranch,
          X45_Species,	X46_Individuals_Count,	X47_Sighting_Distance,	X48_SightAnimal_Beari,	
-         X49_Transect_Bearing,	X50_Landcover,	Animal_Lat,	Animal_Long,	angle,	distance)%>%
+         X49_Transect_Bearing,	X50_Landcover,	Lat,	Long, Lat_segment,Long_segment,angle,	distance)%>%
   filter(str_detect(X7_Cell_ID,"BK")==T)
 
 transect_summary=form%>%
