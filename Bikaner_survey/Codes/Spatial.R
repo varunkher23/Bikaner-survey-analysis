@@ -319,3 +319,49 @@ spprich=read.csv("Processed_data/spprich.csv")%>%
   labs(color="Survey HQ")+
   scale_colour_discrete(label=element_blank())
 
+spprich_obsv=point_master%>%
+  left_join(read.csv("Raw_data/Bird_traits.csv"))%>%
+  group_by(X7_Cell_ID)%>%
+  summarise(Overall=length(unique(X14_Species_Name)),
+            Generalist=length(unique(X14_Species_Name[Habitat=="Multiple"])),
+            Grassland=length(unique(X14_Species_Name[Habitat=="Grassland-Desert"])),
+            Woodland=length(unique(X14_Species_Name[Habitat=="Woodland"])))%>%
+  pivot_longer(cols = c("Overall","Grassland","Woodland","Generalist"))%>%
+  filter(name%in%c("Grassland","Generalist"))%>%
+  left_join(all_grids)%>%
+  st_as_sf()%>%
+  ggplot()+
+  geom_sf(data=Ind_adm)+
+  geom_sf(data=Bik_outline,fill="khaki4",alpha=0.2,show.legend = "polygon")+
+  geom_sf(aes(fill=value))+
+  scale_fill_binned(low="#f7fcb9",high="#31a354")+
+  geom_sf(data = survey_HQ,aes(color="red"),size=4)+
+  geom_text_repel(data = survey_HQ, aes(x = X, y = Y, label = Name), 
+                  nudge_x = c(0.5, 0, -0.2, 0.2), nudge_y = c(-0.1, 
+                                                              -0.3, 0.2, 0.13))+
+  ggtitle("Bird Species Richness",subtitle = "Observed bird richness at the grid level")+
+  annotation_scale(location = "br", width_hint = 0.3) +
+  annotation_north_arrow(location = "br", which_north = "true", 
+                         pad_x = unit(0.50, "in"), pad_y = unit(0.2, "in"),
+                         style = north_arrow_fancy_orienteering,height = unit(0.4,"in"),width = unit(0.3,"in"))+
+  theme(panel.background = element_blank(),
+        panel.border = element_rect(fill=NA),
+        legend.position = "bottom",
+        legend.title = element_text(face="bold"),
+        axis.title = element_blank(),
+        plot.title = element_text(face="bold",size = 16),
+        panel.spacing = unit(2,"lines"),
+        strip.text.x = element_text(hjust = 0,face = "bold",size = 13),
+        strip.background = element_blank(),text = element_text(size=11))+
+  geom_text(aes(74.4,28.1,label="CHURU"))+
+  geom_text(aes(71.65,27.65,label="JAISALMER"))+
+  geom_text(aes(73.5,29.18,label="SHRI GANGANAGAR"))+
+  geom_text(aes(72.5,27.3,label="JODHPUR"))+
+  geom_text(aes(73.8,27.3,label="NAGAUR"))+
+  geom_text(aes(71.8,28.8,label="PAKISTAN"),fontface="bold")+
+  ylim(27.2,29.2)+
+  xlim(71.5,74.5)+
+  labs(fill="Species \nrichness")+
+  labs(color="Survey HQ")+
+  scale_colour_discrete(label=element_blank())+
+  facet_wrap(.~name)
